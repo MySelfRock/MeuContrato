@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Download, FileText, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Loader2, RefreshCw, PenTool } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Navbar } from '@/components/layout/Navbar'
+import { SignatureDialog } from '@/components/contracts/SignatureDialog'
 import { useAuthStore } from '@/lib/store'
 import { contractsApi } from '@/lib/api'
 import { formatDateTime } from '@/lib/utils'
@@ -19,11 +20,12 @@ export default function ContractDetailPage() {
   const router = useRouter()
   const params = useParams()
   const contractId = params.id as string
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [contract, setContract] = useState<ContractInstance | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -171,10 +173,22 @@ export default function ContractDetailPage() {
                   )}
 
                   {contract.pdfUrl && (
-                    <Button onClick={handleDownloadPDF}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar PDF
-                    </Button>
+                    <>
+                      <Button onClick={handleDownloadPDF}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar PDF
+                      </Button>
+
+                      {user?.plan === 'BUSINESS' && contract.status !== 'SIGNED' && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowSignatureDialog(true)}
+                        >
+                          <PenTool className="h-4 w-4 mr-2" />
+                          Assinar
+                        </Button>
+                      )}
+                    </>
                   )}
 
                   <Button
@@ -281,6 +295,18 @@ export default function ContractDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Signature Dialog */}
+        {showSignatureDialog && (
+          <SignatureDialog
+            contractId={contractId}
+            onSuccess={() => {
+              setShowSignatureDialog(false)
+              loadContract()
+            }}
+            onCancel={() => setShowSignatureDialog(false)}
+          />
+        )}
       </div>
     </div>
   )

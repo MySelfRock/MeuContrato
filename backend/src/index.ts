@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.routes';
 import templateRoutes from './routes/template.routes';
 import contractRoutes from './routes/contract.routes';
 import userRoutes from './routes/user.routes';
+import stripeRoutes from './routes/stripe.routes';
+import signatureRoutes from './routes/signature.routes';
 
 // Middlewares
 import { errorHandler } from './middlewares/error.middleware';
@@ -48,6 +50,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/signatures', signatureRoutes);
+
+// Servir arquivos estáticos (PDFs)
+app.use('/pdfs', express.static('public/pdfs'));
 
 // Error Handler (must be last)
 app.use(errorHandler);

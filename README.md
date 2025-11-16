@@ -197,15 +197,24 @@ MeuContrato/
 - [x] **Navbar com informações do usuário**
 - [x] **Sistema de toasts para feedback**
 
+### ✅ Fase 3 - Funcionalidades Avançadas
+
+- [x] **Sistema de pagamentos com Stripe**
+- [x] **Integração com assinatura digital (ZapSign)**
+- [x] **Página de planos e upgrade**
+- [x] **Gerenciamento de assinaturas**
+- [x] **Webhooks do Stripe**
+- [x] **Diálogo de assinatura digital no frontend**
+
 ### 🔄 Próximas Funcionalidades
 
 - [ ] Edição de contratos gerados
-- [ ] Integração com assinatura digital (ZapSign/ClickSign)
-- [ ] Sistema de pagamentos (Stripe)
-- [ ] Painel administrativo
-- [ ] Compartilhamento de contratos
-- [ ] Histórico de versões
+- [ ] Painel administrativo completo
+- [ ] Compartilhamento de contratos por link
+- [ ] Histórico de versões de contratos
 - [ ] API externa para integrações
+- [ ] Notificações por email
+- [ ] Biblioteca de cláusulas personalizadas
 
 ## 📊 Templates Disponíveis
 

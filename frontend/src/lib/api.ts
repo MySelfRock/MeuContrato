@@ -129,3 +129,42 @@ export const userApi = {
     return response.data
   },
 }
+
+// Stripe API
+export const stripeApi = {
+  createCheckoutSession: async (plan: 'PRO' | 'BUSINESS') => {
+    const response = await api.post('/stripe/create-checkout-session', { plan })
+    return response.data
+  },
+
+  createPortalSession: async () => {
+    const response = await api.post('/stripe/create-portal-session')
+    return response.data
+  },
+
+  getSubscription: async () => {
+    const response = await api.get('/stripe/subscription')
+    return response.data
+  },
+}
+
+// Signature API
+export const signatureApi = {
+  create: async (contractId: string, signers: Array<{ name: string; email: string }>) => {
+    const response = await api.post('/signatures/create', {
+      contractId,
+      signers,
+    })
+    return response.data
+  },
+
+  getStatus: async (contractId: string) => {
+    const response = await api.get(`/signatures/${contractId}/status`)
+    return response.data
+  },
+
+  cancel: async (contractId: string) => {
+    const response = await api.delete(`/signatures/${contractId}`)
+    return response.data
+  },
+}

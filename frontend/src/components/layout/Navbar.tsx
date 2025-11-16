@@ -60,6 +60,12 @@ export function Navbar() {
             >
               Meus Contratos
             </Link>
+            <Link
+              href="/plans"
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
+              Planos
+            </Link>
           </div>
 
           {/* User Menu */}
