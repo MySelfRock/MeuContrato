@@ -39,6 +39,13 @@ interface EnvironmentConfig {
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
+
+  // AWS S3
+  AWS_REGION: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_S3_BUCKET: string;
+  AWS_ENDPOINT?: string; // Para LocalStack/MinIO em desenvolvimento
 }
 
 /**
@@ -119,6 +126,13 @@ export function validateEnv(): EnvironmentConfig {
       // Rate Limiting
       RATE_LIMIT_WINDOW_MS: parseInt(requireEnv('RATE_LIMIT_WINDOW_MS', '900000'), 10),
       RATE_LIMIT_MAX_REQUESTS: parseInt(requireEnv('RATE_LIMIT_MAX_REQUESTS', '100'), 10),
+
+      // AWS S3
+      AWS_REGION: requireEnv('AWS_REGION'),
+      AWS_ACCESS_KEY_ID: requireEnv('AWS_ACCESS_KEY_ID'),
+      AWS_SECRET_ACCESS_KEY: requireEnv('AWS_SECRET_ACCESS_KEY'),
+      AWS_S3_BUCKET: requireEnv('AWS_S3_BUCKET'),
+      AWS_ENDPOINT: optionalEnv('AWS_ENDPOINT'), // Para LocalStack/MinIO
     };
 
     // Validações adicionais de segurança para produção
@@ -140,6 +154,7 @@ export function validateEnv(): EnvironmentConfig {
     console.log(`📦 Ambiente: ${config.NODE_ENV}`);
     console.log(`🌐 CORS Origin: ${config.CORS_ORIGIN}`);
     console.log(`🤖 Modelo IA: ${config.GEMINI_MODEL}`);
+    console.log(`☁️  S3 Bucket: ${config.AWS_S3_BUCKET} (${config.AWS_REGION})`);
 
     return config;
   } catch (error) {

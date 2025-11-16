@@ -188,6 +188,32 @@ export class ContractService {
   }
 
   /**
+   * Gera URL pré-assinada para download do PDF
+   */
+  static async getPDFDownloadUrl(contractId: string, userId: string): Promise<string> {
+    const contract = await prisma.contractInstance.findUnique({
+      where: { id: contractId },
+    });
+
+    if (!contract) {
+      throw new AppError(404, 'Contrato não encontrado');
+    }
+
+    if (contract.userId !== userId) {
+      throw new AppError(403, 'Acesso negado');
+    }
+
+    if (!contract.pdfUrl) {
+      throw new AppError(400, 'PDF ainda não foi gerado');
+    }
+
+    // Gerar URL pré-assinada (válida por 1 hora)
+    const downloadUrl = await PDFService.getDownloadUrl(contract.pdfUrl);
+
+    return downloadUrl;
+  }
+
+  /**
    * Lista contratos do usuário
    */
   static async listContracts(userId: string, page = 1, limit = 10) {

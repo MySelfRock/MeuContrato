@@ -168,4 +168,25 @@ router.post('/:id/pdf', async (req: AuthRequest, res, next) => {
   }
 });
 
+/**
+ * GET /api/contracts/:id/download-url
+ * Gera URL pré-assinada para download do PDF (válida por 1 hora)
+ */
+router.get('/:id/download-url', async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const downloadUrl = await ContractService.getPDFDownloadUrl(id, req.userId!);
+
+    res.json({
+      data: {
+        downloadUrl,
+        expiresIn: 3600 // 1 hora em segundos
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

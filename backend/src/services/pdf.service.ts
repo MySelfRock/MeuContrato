@@ -1,7 +1,8 @@
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
 import { AppError } from '../middlewares/error.middleware';
+import { S3Service } from './s3.service';
+import { logger } from '../middlewares/logger.middleware';
+import { Readable } from 'stream';
 
 interface GeneratePDFParams {
   contractId: string;
@@ -10,30 +11,57 @@ interface GeneratePDFParams {
 }
 
 export class PDFService {
-  private static readonly PDF_DIR = path.join(process.cwd(), 'public', 'pdfs');
-
   /**
-   * Garante que o diretório de PDFs existe
-   */
-  private static ensurePDFDirectory(): void {
-    if (!fs.existsSync(this.PDF_DIR)) {
-      fs.mkdirSync(this.PDF_DIR, { recursive: true });
-    }
-  }
-
-  /**
-   * Gera um PDF do contrato
+   * Gera um PDF do contrato e faz upload para S3
    */
   static async generatePDF(params: GeneratePDFParams): Promise<string> {
     const { contractId, title, content } = params;
 
-    this.ensurePDFDirectory();
+    try {
+      // Gerar PDF em memória
+      const pdfBuffer = await this.createPDFBuffer(title, content);
 
-    const fileName = `contract-${contractId}-${Date.now()}.pdf`;
-    const filePath = path.join(this.PDF_DIR, fileName);
+      // Nome do arquivo
+      const fileName = `contract-${contractId}-${Date.now()}.pdf`;
 
+      // Upload para S3
+      const uploadResult = await S3Service.uploadFile({
+        file: pdfBuffer,
+        fileName,
+        contentType: 'application/pdf',
+        folder: 'contracts',
+        metadata: {
+          contractId,
+          title,
+          generatedAt: new Date().toISOString(),
+        },
+      });
+
+      logger.info('PDF gerado e enviado para S3', {
+        contractId,
+        s3Key: uploadResult.key,
+        size: uploadResult.size,
+      });
+
+      // Retornar a chave do S3 (formato: s3://bucket/key)
+      return uploadResult.key;
+    } catch (error: any) {
+      logger.error('Erro ao gerar e enviar PDF', {
+        error: error.message,
+        contractId,
+      });
+      throw new AppError(500, `Erro ao gerar PDF: ${error.message}`);
+    }
+  }
+
+  /**
+   * Cria buffer do PDF em memória
+   */
+  private static async createPDFBuffer(title: string, content: string): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
+        const chunks: Buffer[] = [];
+
         // Criar documento PDF
         const doc = new PDFDocument({
           size: 'A4',
@@ -41,13 +69,14 @@ export class PDFService {
             top: 50,
             bottom: 50,
             left: 50,
-            right: 50
-          }
+            right: 50,
+          },
         });
 
-        // Stream para o arquivo
-        const stream = fs.createWriteStream(filePath);
-        doc.pipe(stream);
+        // Capturar chunks do PDF
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (error) => reject(error));
 
         // Header
         doc
@@ -79,8 +108,10 @@ export class PDFService {
           if (paragraph.trim().length === 0) return;
 
           // Detectar títulos (geralmente em maiúsculas ou começam com números)
-          if (paragraph.match(/^[A-ZÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜ\s]+$/) ||
-              paragraph.match(/^(CLÁUSULA|CAPÍTULO|ARTIGO|\d+\.)/)) {
+          if (
+            paragraph.match(/^[A-ZÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜ\s]+$/) ||
+            paragraph.match(/^(CLÁUSULA|CAPÍTULO|ARTIGO|\d+\.)/)
+          ) {
             doc
               .fontSize(12)
               .font('Helvetica-Bold')
@@ -127,16 +158,6 @@ export class PDFService {
 
         // Finalizar documento
         doc.end();
-
-        stream.on('finish', () => {
-          // Retornar URL relativa do PDF
-          const pdfUrl = `/pdfs/${fileName}`;
-          resolve(pdfUrl);
-        });
-
-        stream.on('error', (error) => {
-          reject(new AppError(500, `Erro ao gerar PDF: ${error.message}`));
-        });
       } catch (error) {
         reject(new AppError(500, `Erro ao criar documento PDF: ${error}`));
       }
@@ -144,32 +165,82 @@ export class PDFService {
   }
 
   /**
-   * Deleta um arquivo PDF
+   * Gera URL pré-assinada para download do PDF
+   * @param s3Key Chave do arquivo no S3
+   * @param expiresIn Tempo de expiração em segundos (padrão: 1 hora)
    */
-  static async deletePDF(pdfUrl: string): Promise<void> {
+  static async getDownloadUrl(s3Key: string, expiresIn?: number): Promise<string> {
     try {
-      const fileName = path.basename(pdfUrl);
-      const filePath = path.join(this.PDF_DIR, fileName);
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (error) {
-      console.error('Erro ao deletar PDF:', error);
-      // Não lançar erro, apenas logar
+      return await S3Service.getPresignedUrl(s3Key, expiresIn);
+    } catch (error: any) {
+      logger.error('Erro ao gerar URL de download', {
+        error: error.message,
+        s3Key,
+      });
+      throw new AppError(500, 'Erro ao gerar URL de download');
     }
   }
 
   /**
-   * Verifica se um PDF existe
+   * Deleta um PDF do S3
    */
-  static pdfExists(pdfUrl: string): boolean {
+  static async deletePDF(s3Key: string): Promise<void> {
     try {
-      const fileName = path.basename(pdfUrl);
-      const filePath = path.join(this.PDF_DIR, fileName);
-      return fs.existsSync(filePath);
+      await S3Service.deleteFile(s3Key);
+      logger.info('PDF deletado do S3', { s3Key });
+    } catch (error: any) {
+      logger.error('Erro ao deletar PDF', {
+        error: error.message,
+        s3Key,
+      });
+      // Não lançar erro, apenas logar (compatibilidade com código antigo)
+    }
+  }
+
+  /**
+   * Verifica se um PDF existe no S3
+   */
+  static async pdfExists(s3Key: string): Promise<boolean> {
+    try {
+      return await S3Service.fileExists(s3Key);
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * Obtém informações sobre o PDF
+   */
+  static async getPDFInfo(s3Key: string) {
+    try {
+      return await S3Service.getFileInfo(s3Key);
+    } catch (error: any) {
+      throw new AppError(404, 'PDF não encontrado');
+    }
+  }
+
+  /**
+   * COMPATIBILIDADE: Converte URL antiga (/pdfs/filename.pdf) para chave S3
+   * Útil durante migração
+   */
+  static urlToS3Key(pdfUrl: string): string {
+    if (pdfUrl.startsWith('contracts/')) {
+      // Já é uma chave S3
+      return pdfUrl;
+    }
+
+    // URL antiga no formato /pdfs/filename.pdf
+    const fileName = pdfUrl.replace('/pdfs/', '');
+    return `contracts/${fileName}`;
+  }
+
+  /**
+   * COMPATIBILIDADE: Converte chave S3 para formato de URL (para frontend)
+   * Retorna a chave S3 que será usada para gerar URL pré-assinada
+   */
+  static s3KeyToUrl(s3Key: string): string {
+    // Retornar a chave S3 diretamente
+    // O frontend deve chamar o endpoint /api/contracts/:id/pdf-url
+    return s3Key;
   }
 }
