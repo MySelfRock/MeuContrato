@@ -182,22 +182,30 @@ MeuContrato/
 ### ✅ Frontend
 
 - [x] Configuração Next.js 14 com App Router
-- [x] Sistema de autenticação
+- [x] Sistema de autenticação completo (Login/Signup)
 - [x] Gerenciamento de estado com Zustand
 - [x] Cliente API com Axios
 - [x] Estilização com TailwindCSS
+- [x] Componentes UI com shadcn/ui
 - [x] Landing page responsiva
 - [x] TypeScript completo
+- [x] **Dashboard do usuário com estatísticas**
+- [x] **Página de listagem de templates com busca e filtros**
+- [x] **Formulário dinâmico de criação de contratos**
+- [x] **Visualização detalhada de contratos**
+- [x] **Download de PDFs**
+- [x] **Navbar com informações do usuário**
+- [x] **Sistema de toasts para feedback**
 
-### 🔄 Em Desenvolvimento
+### 🔄 Próximas Funcionalidades
 
-- [ ] Dashboard do usuário
-- [ ] Formulário dinâmico de criação de contratos
-- [ ] Visualização e edição de contratos
-- [ ] Download de PDFs
+- [ ] Edição de contratos gerados
 - [ ] Integração com assinatura digital (ZapSign/ClickSign)
 - [ ] Sistema de pagamentos (Stripe)
 - [ ] Painel administrativo
+- [ ] Compartilhamento de contratos
+- [ ] Histórico de versões
+- [ ] API externa para integrações
 
 ## 📊 Templates Disponíveis
 
