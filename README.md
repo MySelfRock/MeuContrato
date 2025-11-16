@@ -9,7 +9,7 @@ Sistema SaaS completo para geração automática de contratos profissionais usan
 - **Express** - Framework web
 - **Prisma ORM** - Gerenciamento de banco de dados
 - **PostgreSQL** - Banco de dados
-- **OpenAI GPT-4** - Geração de contratos com IA
+- **Google Gemini** - Geração de contratos com IA
 - **JWT** - Autenticação
 - **PDFKit** - Geração de PDFs
 - **Redis** - Filas e cache
@@ -28,7 +28,7 @@ Sistema SaaS completo para geração automática de contratos profissionais usan
 
 - Node.js 18+
 - Docker e Docker Compose
-- Conta OpenAI (para chave de API)
+- Conta Google Cloud com Gemini API ativada (para chave de API)
 
 ## 🛠️ Instalação
 

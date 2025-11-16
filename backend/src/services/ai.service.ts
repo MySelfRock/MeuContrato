@@ -1,9 +1,7 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AppError } from '../middlewares/error.middleware';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 interface GenerateContractParams {
   basePrompt: string;
@@ -44,34 +42,41 @@ INSTRUÇÕES IMPORTANTES:
 Retorne APENAS o texto do contrato, sem comentários adicionais ou explicações.`;
 
     try {
-      const response = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um assistente jurídico especializado em elaboração de contratos. Gere contratos profissionais, claros e juridicamente consistentes.'
-          },
-          {
-            role: 'user',
-            content: fullPrompt
-          }
-        ],
-        temperature: 0.3, // Baixa temperatura para mais consistência
-        max_tokens: 4000
+      // Usar o modelo Gemini Pro
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-pro',
+        generationConfig: {
+          temperature: 0.3, // Baixa temperatura para mais consistência
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 8192,
+        },
       });
 
-      const generatedText = response.choices[0]?.message?.content;
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `Você é um assistente jurídico especializado em elaboração de contratos. Gere contratos profissionais, claros e juridicamente consistentes.\n\n${fullPrompt}`
+              }
+            ]
+          }
+        ],
+      });
+
+      const response = await result.response;
+      const generatedText = response.text();
 
       if (!generatedText) {
         throw new AppError(500, 'Falha ao gerar contrato');
       }
 
       return generatedText.trim();
-    } catch (error) {
-      if (error instanceof OpenAI.APIError) {
-        throw new AppError(500, `Erro na API da OpenAI: ${error.message}`);
-      }
-      throw error;
+    } catch (error: any) {
+      console.error('Erro ao gerar contrato com Gemini:', error);
+      throw new AppError(500, `Erro ao gerar contrato: ${error.message}`);
     }
   }
 
@@ -88,34 +93,40 @@ ${contractText}
 Retorne APENAS o contrato revisado, sem comentários adicionais.`;
 
     try {
-      const response = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um advogado revisor de contratos. Sua função é melhorar contratos mantendo a essência e adicionando rigor jurídico.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 4000
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-pro',
+        generationConfig: {
+          temperature: 0.2,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 8192,
+        },
       });
 
-      const reviewedText = response.choices[0]?.message?.content;
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `Você é um advogado revisor de contratos. Sua função é melhorar contratos mantendo a essência e adicionando rigor jurídico.\n\n${prompt}`
+              }
+            ]
+          }
+        ],
+      });
+
+      const response = await result.response;
+      const reviewedText = response.text();
 
       if (!reviewedText) {
         throw new AppError(500, 'Falha ao revisar contrato');
       }
 
       return reviewedText.trim();
-    } catch (error) {
-      if (error instanceof OpenAI.APIError) {
-        throw new AppError(500, `Erro na API da OpenAI: ${error.message}`);
-      }
-      throw error;
+    } catch (error: any) {
+      console.error('Erro ao revisar contrato com Gemini:', error);
+      throw new AppError(500, `Erro ao revisar contrato: ${error.message}`);
     }
   }
 
@@ -132,23 +143,31 @@ Liste até 5 sugestões de cláusulas que melhorariam este contrato.
 Retorne apenas a lista de sugestões, uma por linha.`;
 
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo', // Modelo mais rápido para sugestões
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um consultor jurídico especializado em contratos.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-pro',
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
       });
 
-      const suggestions = response.choices[0]?.message?.content;
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `Você é um consultor jurídico especializado em contratos.\n\n${prompt}`
+              }
+            ]
+          }
+        ],
+      });
+
+      const response = await result.response;
+      const suggestions = response.text();
 
       if (!suggestions) {
         return [];
@@ -159,7 +178,7 @@ Retorne apenas a lista de sugestões, uma por linha.`;
         .filter(line => line.trim().length > 0)
         .slice(0, 5);
     } catch (error) {
-      console.error('Erro ao gerar sugestões:', error);
+      console.error('Erro ao gerar sugestões com Gemini:', error);
       return [];
     }
   }
