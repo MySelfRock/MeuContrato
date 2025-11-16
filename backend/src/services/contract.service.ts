@@ -1,10 +1,9 @@
-import { PrismaClient, ContractInstance, ContractStatus } from '@prisma/client';
+import { ContractInstance, ContractStatus } from '@prisma/client';
 import { AIService } from './ai.service';
 import { PDFService } from './pdf.service';
 import { AuthService } from './auth.service';
 import { AppError } from '../middlewares/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 interface CreateContractParams {
   userId: string;

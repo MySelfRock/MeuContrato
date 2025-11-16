@@ -4,6 +4,12 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 
+// Load environment variables FIRST
+dotenv.config();
+
+// Validate environment variables before anything else
+import { env } from './config/env';
+
 // Routes
 import authRoutes from './routes/auth.routes';
 import templateRoutes from './routes/template.routes';
@@ -17,16 +23,13 @@ import { errorHandler } from './middlewares/error.middleware';
 import { rateLimiter } from './middlewares/rateLimit.middleware';
 import { requestLogger } from './middlewares/logger.middleware';
 
-// Load environment variables
-dotenv.config();
-
 const app: Express = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT;
 
 // Security & Parsing Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: env.CORS_ORIGIN,
   credentials: true
 }));
 app.use(express.json());
@@ -64,9 +67,10 @@ const server = createServer(app);
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`\n🚀 Server running on port ${PORT}`);
+  console.log(`📝 Environment: ${env.NODE_ENV}`);
   console.log(`🔗 API: http://localhost:${PORT}`);
+  console.log(`✨ Sistema pronto para uso!\n`);
 });
 
 // Graceful shutdown

@@ -83,18 +83,26 @@ router.post(
     const sig = req.headers['stripe-signature'] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // Validação crítica: webhook secret deve estar configurado
     if (!webhookSecret) {
-      console.error('STRIPE_WEBHOOK_SECRET não configurado');
-      return res.status(400).send('Webhook secret não configurado');
+      console.error('❌ CRÍTICO: STRIPE_WEBHOOK_SECRET não configurado!');
+      return res.status(500).send('Webhook não configurado corretamente');
+    }
+
+    // Validação de assinatura obrigatória
+    if (!sig) {
+      console.error('❌ Webhook rejeitado: sem assinatura Stripe');
+      return res.status(401).send('Assinatura ausente');
     }
 
     let event: Stripe.Event;
 
     try {
+      // Valida assinatura do webhook
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err: any) {
-      console.error('Erro ao validar webhook:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      console.error('❌ Webhook Stripe rejeitado: assinatura inválida -', err.message);
+      return res.status(401).send(`Assinatura inválida: ${err.message}`);
     }
 
     try {

@@ -1,7 +1,6 @@
-import { PrismaClient, ContractTemplate } from '@prisma/client';
+import { ContractTemplate } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 interface CreateTemplateParams {
   name: string;

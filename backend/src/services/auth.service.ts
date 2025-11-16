@@ -1,9 +1,8 @@
-import { PrismaClient, User, UserPlan } from '@prisma/client';
+import { User, UserPlan } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middlewares/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 interface SignupData {
   email: string;

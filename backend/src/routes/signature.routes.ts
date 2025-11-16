@@ -2,12 +2,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { SignatureService } from '../services/signature.service';
 import { authenticate, AuthRequest, requirePlan } from '../middlewares/auth.middleware';
+import { validateZapSignWebhook, webhookRateLimit } from '../middlewares/webhook.middleware';
 import { UserPlan } from '@prisma/client';
 
 const router = Router();
-
-// Todas as rotas requerem autenticação
-router.use(authenticate);
 
 // Schema de validação
 const createSignatureSchema = z.object({
@@ -22,10 +20,11 @@ const createSignatureSchema = z.object({
 
 /**
  * POST /api/signatures/create
- * Criar solicitação de assinatura
+ * Criar solicitação de assinatura (requer autenticação)
  */
 router.post(
   '/create',
+  authenticate,
   requirePlan(UserPlan.BUSINESS),
   async (req: AuthRequest, res, next) => {
     try {
@@ -48,9 +47,9 @@ router.post(
 
 /**
  * GET /api/signatures/:contractId/status
- * Obter status de assinatura
+ * Obter status de assinatura (requer autenticação)
  */
-router.get('/:contractId/status', async (req: AuthRequest, res, next) => {
+router.get('/:contractId/status', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { contractId } = req.params;
 
@@ -69,9 +68,9 @@ router.get('/:contractId/status', async (req: AuthRequest, res, next) => {
 
 /**
  * DELETE /api/signatures/:contractId
- * Cancelar solicitação de assinatura
+ * Cancelar solicitação de assinatura (requer autenticação)
  */
-router.delete('/:contractId', async (req: AuthRequest, res, next) => {
+router.delete('/:contractId', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { contractId } = req.params;
 
@@ -87,16 +86,22 @@ router.delete('/:contractId', async (req: AuthRequest, res, next) => {
 
 /**
  * POST /api/signatures/webhook/zapsign
- * Webhook do ZapSign
+ * Webhook do ZapSign (público, mas com validação de segurança)
  */
-router.post('/webhook/zapsign', async (req, res) => {
-  try {
-    await SignatureService.handleZapSignWebhook(req.body);
-    res.json({ received: true });
-  } catch (error) {
-    console.error('Erro ao processar webhook ZapSign:', error);
-    res.status(500).send('Erro ao processar webhook');
+router.post(
+  '/webhook/zapsign',
+  webhookRateLimit,
+  validateZapSignWebhook,
+  async (req, res) => {
+    try {
+      console.log('✅ Webhook ZapSign recebido e validado');
+      await SignatureService.handleZapSignWebhook(req.body);
+      res.json({ received: true });
+    } catch (error) {
+      console.error('❌ Erro ao processar webhook ZapSign:', error);
+      res.status(500).send('Erro ao processar webhook');
+    }
   }
-});
+);
 
 export default router;

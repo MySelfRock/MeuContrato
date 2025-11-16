@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { PrismaClient, SignatureProvider } from '@prisma/client';
+import { SignatureProvider } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 interface SignerData {
   name: string;

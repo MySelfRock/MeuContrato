@@ -1,8 +1,7 @@
 import Stripe from 'stripe';
-import { PrismaClient, UserPlan } from '@prisma/client';
+import { UserPlan } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-11-20.acacia',
 });
