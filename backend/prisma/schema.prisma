@@ -1,0 +1,119 @@
+// Prisma Schema para o Sistema de Geração de Contratos
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum ContractStatus {
+  DRAFT
+  GENERATED
+  SIGNED
+}
+
+enum SignatureProvider {
+  ZAPSIGN
+  CLICKSIGN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  plan      UserPlan @default(FREE)
+  credits   Int      @default(2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contracts  ContractInstance[]
+  auditLogs  AuditLog[]
+  stripeCustomerId String? @unique
+
+  @@index([email])
+  @@map("users")
+}
+
+model ContractTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  category    String
+  description String
+  jsonSchema  Json     // Campos necessários para o contrato
+  aiPromptBase String  @db.Text // Prompt base para a IA
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contracts ContractInstance[]
+
+  @@index([slug])
+  @@index([category])
+  @@map("contract_templates")
+}
+
+model ContractInstance {
+  id            String         @id @default(cuid())
+  userId        String
+  templateId    String
+  answers       Json           // Respostas do formulário
+  generatedText String?        @db.Text // Texto do contrato gerado
+  pdfUrl        String?
+  status        ContractStatus @default(DRAFT)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template  ContractTemplate  @relation(fields: [templateId], references: [id])
+  signatures Signature[]
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([status])
+  @@map("contract_instances")
+}
+
+model Signature {
+  id          String            @id @default(cuid())
+  contractId  String
+  signerName  String
+  signerEmail String
+  signedAt    DateTime?
+  provider    SignatureProvider?
+  providerData Json?           // Dados específicos do provedor
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  contract ContractInstance @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([signerEmail])
+  @@map("signatures")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
