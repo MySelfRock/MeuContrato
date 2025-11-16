@@ -15,6 +15,11 @@ import { AppError } from '../middlewares/error.middleware';
 import { logger } from '../middlewares/logger.middleware';
 import { Readable } from 'stream';
 import * as crypto from 'crypto';
+import {
+  getCloudFrontUrl,
+  invalidateCloudFrontCache,
+  cloudFrontConfig,
+} from '../config/cloudfront';
 
 export interface UploadParams {
   file: Buffer | Readable;
@@ -90,9 +95,21 @@ export class S3Service {
 
   /**
    * Gera URL pré-assinada para download (expira em 1 hora)
+   * Se CloudFront estiver configurado, retorna URL do CloudFront (sem expiração)
+   * Senão, retorna presigned URL do S3 (com expiração)
    */
   static async getPresignedUrl(key: string, expiresIn?: number): Promise<string> {
     try {
+      // Se CloudFront estiver habilitado, usar URL do CloudFront
+      if (cloudFrontConfig.enabled) {
+        const cloudFrontUrl = getCloudFrontUrl(key);
+        if (cloudFrontUrl) {
+          logger.info('Usando CloudFront URL para download', { key });
+          return cloudFrontUrl;
+        }
+      }
+
+      // Fallback: gerar presigned URL do S3
       const command = new GetObjectCommand({
         Bucket: S3_CONFIG.BUCKET_NAME,
         Key: key,
@@ -127,12 +144,44 @@ export class S3Service {
       await s3Client.send(command);
 
       logger.info(`Arquivo deletado do S3: ${key}`, { key });
+
+      // Invalidar cache do CloudFront se estiver habilitado
+      if (cloudFrontConfig.enabled) {
+        await this.invalidateCache([key]);
+      }
     } catch (error: any) {
       logger.error('Erro ao deletar arquivo do S3', {
         error: error.message,
         key,
       });
       throw new AppError(500, `Erro ao deletar arquivo: ${error.message}`);
+    }
+  }
+
+  /**
+   * Invalida cache do CloudFront para arquivos específicos
+   */
+  static async invalidateCache(keys: string[]): Promise<void> {
+    if (!cloudFrontConfig.enabled) {
+      logger.debug('CloudFront não habilitado, pulando invalidação de cache');
+      return;
+    }
+
+    try {
+      // Converter chaves S3 para paths do CloudFront
+      const paths = keys.map((key) => {
+        // Remover 'contracts/' do início se existir
+        const path = key.startsWith('contracts/') ? key.substring(10) : key;
+        return `/contracts/${path}`;
+      });
+
+      await invalidateCloudFrontCache(paths);
+    } catch (error: any) {
+      logger.error('Erro ao invalidar cache do CloudFront', {
+        error: error.message,
+        keys: keys.length,
+      });
+      // Não lançar erro - cache eventualmente expirará
     }
   }
 
