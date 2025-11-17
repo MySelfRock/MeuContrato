@@ -1,0 +1,176 @@
+# ============================================
+# MeuContrato - Terraform Variables Example
+# ============================================
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+
+# ============================================
+# Variáveis Gerais
+# ============================================
+
+project_name = "meucontrato"
+environment  = "dev"  # dev, staging ou prod
+owner_email  = "seu-email@example.com"
+
+# Regiões AWS
+aws_region     = "us-east-1"
+replica_region = "us-west-2"
+
+# ============================================
+# S3 e Storage
+# ============================================
+
+enable_s3_versioning  = true
+enable_s3_replication = true  # Recomendado para produção
+enable_s3_lifecycle   = true
+
+# Lifecycle policies (dias)
+s3_lifecycle_glacier_ir_days   = 90   # Transição para Glacier Instant Retrieval
+s3_lifecycle_glacier_days      = 180  # Transição para Glacier
+s3_lifecycle_deep_archive_days = 365  # Transição para Deep Archive
+s3_log_retention_days          = 90   # Retenção de logs
+
+# ============================================
+# CloudFront
+# ============================================
+
+enable_cloudfront       = true  # Recomendado para produção
+cloudfront_price_class  = "PriceClass_100"  # US, Europe, Israel
+cloudfront_default_ttl  = 86400   # 24 horas
+cloudfront_max_ttl      = 31536000 # 1 ano
+
+# ============================================
+# Rede (VPC)
+# ============================================
+
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+database_subnet_cidrs = ["10.0.20.0/24", "10.0.21.0/24"]
+
+# ============================================
+# Database (RDS PostgreSQL)
+# ============================================
+
+enable_rds = true
+
+# Instância
+db_instance_class       = "db.t4g.micro"  # Free tier elegível
+db_allocated_storage    = 20
+db_max_allocated_storage = 100
+
+# Database
+db_name     = "meucontrato"
+db_username = "postgres"
+
+# Backup
+db_backup_retention_period = 7    # dias
+db_multi_az               = false # true em produção para alta disponibilidade
+
+# ============================================
+# Cache (ElastiCache Redis)
+# ============================================
+
+enable_redis = true
+
+redis_node_type      = "cache.t4g.micro"  # Free tier elegível
+redis_num_cache_nodes = 1  # 2+ em produção para alta disponibilidade
+redis_engine_version = "7.0"
+
+# ============================================
+# ECS (Fargate) - Backend
+# ============================================
+
+enable_ecs = true
+
+# Recursos
+ecs_cpu    = 256  # .25 vCPU
+ecs_memory = 512  # 512 MB
+
+# Escalabilidade
+ecs_desired_count  = 1  # 2+ em produção
+ecs_autoscaling_min = 1
+ecs_autoscaling_max = 4
+ecs_autoscaling_cpu_target = 70  # %
+
+# Application
+app_image = "meucontrato/backend:latest"  # Atualizar com sua imagem Docker
+app_port  = 3000
+
+# ============================================
+# Secrets (OBRIGATÓRIOS - preencher com valores reais)
+# ============================================
+
+# ATENÇÃO: Não commite este arquivo com secrets reais!
+# Use AWS Secrets Manager ou variáveis de ambiente em produção
+
+jwt_secret            = "sua-chave-jwt-minimo-32-caracteres-aqui"
+gemini_api_key        = "sua-gemini-api-key"
+stripe_secret_key     = "sk_test_..."
+stripe_webhook_secret = "whsec_..."
+
+# ============================================
+# Monitoring e Logging
+# ============================================
+
+enable_cloudwatch_logs   = true
+log_retention_days       = 30  # dias
+enable_cloudwatch_alarms = true
+alarm_email              = "alertas@example.com"
+
+# ============================================
+# Domain e SSL (Opcional)
+# ============================================
+
+enable_custom_domain = false  # true se você tem um domínio
+domain_name          = ""     # "api.meucontrato.com"
+certificate_arn      = ""     # ARN do certificado ACM
+
+# ============================================
+# Backup
+# ============================================
+
+enable_automated_backups = true
+backup_retention_days    = 7  # dias
+
+# ============================================
+# Security
+# ============================================
+
+# ATENÇÃO: Restringir em produção para IPs específicos
+allowed_cidr_blocks = ["0.0.0.0/0"]  # Permitir de qualquer lugar (dev only)
+
+enable_encryption = true  # Sempre true em produção
+
+# ============================================
+# Cost Optimization
+# ============================================
+
+enable_cost_optimization = true
+enable_spot_instances    = false  # true apenas em dev/staging
+
+# ============================================
+# Environment-specific Overrides
+# ============================================
+
+# Desenvolvimento
+# environment = "dev"
+# db_instance_class = "db.t4g.micro"
+# redis_node_type = "cache.t4g.micro"
+# ecs_desired_count = 1
+# db_multi_az = false
+
+# Staging
+# environment = "staging"
+# db_instance_class = "db.t4g.small"
+# redis_node_type = "cache.t4g.small"
+# ecs_desired_count = 2
+# db_multi_az = false
+
+# Produção
+# environment = "prod"
+# db_instance_class = "db.t4g.medium"
+# redis_node_type = "cache.t4g.medium"
+# ecs_desired_count = 3
+# db_multi_az = true
+# allowed_cidr_blocks = ["203.0.113.0/24"]  # Seu IP/VPN

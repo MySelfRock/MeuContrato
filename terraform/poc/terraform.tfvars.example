@@ -1,0 +1,76 @@
+# ============================================
+# MeuContrato POC - Terraform Variables
+# ============================================
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+
+# ============================================
+# Geral
+# ============================================
+
+project_name = "meucontrato"
+aws_region   = "us-east-1"
+
+# ============================================
+# EC2
+# ============================================
+
+# Tipo de instância (free tier elegível)
+instance_type = "t3.micro"  # Ou "t2.micro" ou "t4g.micro"
+
+# Nome do par de chaves SSH (OBRIGATÓRIO)
+# Você deve criar este par de chaves no console AWS antes
+# AWS Console → EC2 → Key Pairs → Create Key Pair
+key_pair_name = "meucontrato-poc-key"
+
+# Usar Elastic IP (recomendado para IP fixo)
+use_elastic_ip = true
+
+# IPs permitidos para SSH (IMPORTANTE: restringir ao seu IP)
+# Exemplo: ["203.0.113.0/24"] ou ["SEU_IP/32"]
+allowed_ssh_cidr = ["0.0.0.0/0"]  # ⚠️ MUDAR PARA SEU IP EM PRODUÇÃO
+
+# ============================================
+# Secrets (OBRIGATÓRIOS)
+# ============================================
+
+# JWT Secret (mínimo 32 caracteres)
+# Gerar: openssl rand -base64 32
+jwt_secret = "sua-chave-jwt-super-secreta-minimo-32-chars"
+
+# Google Gemini API Key
+# Obter em: https://makersuite.google.com/app/apikey
+gemini_api_key = "sua-gemini-api-key-aqui"
+
+# Stripe (opcional para POC)
+stripe_secret_key     = "sk_test_..."
+stripe_webhook_secret = "whsec_..."
+
+# Senha do PostgreSQL (mínimo 12 caracteres)
+db_password = "senha-super-secreta-postgres"
+
+# ============================================
+# Notas
+# ============================================
+
+# 1. Criar Key Pair:
+#    aws ec2 create-key-pair --key-name meucontrato-poc-key --query 'KeyMaterial' --output text > ~/.ssh/meucontrato-poc-key.pem
+#    chmod 400 ~/.ssh/meucontrato-poc-key.pem
+
+# 2. Custo estimado:
+#    - EC2 t3.micro: $0.00 (free tier) ou $7.50/mês
+#    - S3: $0.23/mês (10GB)
+#    - Elastic IP: $0.00 (em uso)
+#    - Total: $0-15/mês
+
+# 3. Free tier:
+#    - 750 horas/mês de t2.micro ou t3.micro (12 meses)
+#    - 5GB de S3 Standard (12 meses)
+#    - 15GB de transferência de dados (12 meses)
+
+# 4. Deploy:
+#    terraform init
+#    terraform plan
+#    terraform apply
+
+# 5. Destruir (quando não precisar mais):
+#    terraform destroy
